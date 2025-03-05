@@ -62,7 +62,7 @@ export function Navigation() {
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton
                     asChild
-                    active={location.pathname === item.path}
+                    isActive={location.pathname === item.path}
                   >
                     <Link to={item.path} className="flex items-center space-x-2">
                       <item.icon className="w-4 h-4" />
