@@ -3,3 +3,4 @@ project_id = "pgzmhqtsbqejkymebmze"
 
 [functions.fetch-nycdb-data]
 verify_jwt = false
+timeout_seconds = 90

@@ -42,13 +42,20 @@ export function DataImporter() {
     setImportStatus(null);
     
     try {
-      toast.info("Starting data import from NYCDB...", {
+      toast.info("Starting data import from NYC Department of Finance...", {
         duration: 5000,
       });
       
+      // Call the edge function with a timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60-second timeout
+      
       const { data, error } = await supabase.functions.invoke('fetch-nycdb-data', {
         method: 'POST',
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (error) throw error;
       
@@ -60,10 +67,13 @@ export function DataImporter() {
       } else {
         toast.error(`Import failed: ${data.error}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error during import:", error);
-      setImportStatus({ success: false, error: error.message });
-      toast.error(`Import failed: ${error.message}`);
+      setImportStatus({ 
+        success: false, 
+        error: error.message || "Network error or timeout. Please try again." 
+      });
+      toast.error(`Import failed: ${error.message || "Unknown error"}`);
     } finally {
       setIsImporting(false);
     }
@@ -79,7 +89,7 @@ export function DataImporter() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className="h-5 w-5" />
-          NYCDB Data Import
+          NYC Property Sales Data Import
         </CardTitle>
         <CardDescription>
           Import property sales data from NYC Department of Finance
@@ -101,7 +111,7 @@ export function DataImporter() {
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Importing data...</span>
-                <span>Please wait</span>
+                <span>This may take a minute or two</span>
               </div>
               <Progress value={isImporting ? 75 : 0} className="w-full" />
             </div>
@@ -125,6 +135,9 @@ export function DataImporter() {
                   <div>
                     <p className="font-medium">Import failed</p>
                     <p className="text-sm text-red-700">{importStatus.error}</p>
+                    <p className="text-xs text-gray-700 mt-1">
+                      Try again or check the Supabase Edge Function logs for more details.
+                    </p>
                   </div>
                 </div>
               )}
@@ -155,7 +168,7 @@ export function DataImporter() {
           ) : (
             <>
               <Download className="h-4 w-4 mr-2" />
-              Import NYCDB Data
+              Import NYC Data
             </>
           )}
         </Button>

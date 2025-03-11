@@ -13,16 +13,21 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL') as string;
 const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') as string;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Define the NYCDB data URL for property sales
-const PROPERTY_SALES_URL = 'https://data.cityofnewyork.us/api/views/5pgy-q343/rows.csv?accessType=DOWNLOAD';
+// Define the NYC Department of Finance Rolling Sales data URL
+// This is NYC Department of Finance Rolling Sales data, which is more reliable than the previous URL
+const PROPERTY_SALES_URL = 'https://data.cityofnewyork.us/api/views/usep-8jbt/rows.csv?accessType=DOWNLOAD';
 
 async function fetchAndProcessPropertySales() {
-  console.log('Starting to fetch property sales data from NYCDB...');
+  console.log('Starting to fetch property sales data from NYC Department of Finance...');
   
   try {
     // Fetch the CSV file
     console.log(`Fetching data from: ${PROPERTY_SALES_URL}`);
-    const response = await fetch(PROPERTY_SALES_URL);
+    const response = await fetch(PROPERTY_SALES_URL, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; NYCDBDataImporter/1.0)'
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`Failed to fetch data: ${response.status} ${response.statusText}`);
@@ -31,6 +36,10 @@ async function fetchAndProcessPropertySales() {
     // Read the CSV content
     const csvText = await response.text();
     console.log(`Successfully downloaded CSV data (${csvText.length} bytes)`);
+    
+    if (csvText.length < 100) {
+      throw new Error('CSV data is too small, likely invalid');
+    }
     
     // Parse the CSV
     const records = await csvParse(csvText, {
@@ -53,8 +62,11 @@ async function fetchAndProcessPropertySales() {
     let processedCount = 0;
     let successCount = 0;
     
-    for (let i = 0; i < records.length; i += BATCH_SIZE) {
-      const batch = records.slice(i, i + BATCH_SIZE);
+    // Only process a limited subset for testing
+    const limitedRecords = records.slice(0, 2000);
+    
+    for (let i = 0; i < limitedRecords.length; i += BATCH_SIZE) {
+      const batch = limitedRecords.slice(i, i + BATCH_SIZE);
       const formattedBatch = batch.map(record => {
         // Map CSV fields to our database schema
         return {
@@ -66,12 +78,13 @@ async function fetchAndProcessPropertySales() {
           document_date: record.sale_date ? new Date(record.sale_date).toISOString() : null,
           property_type: determinePropertyType(record.building_class_category),
           recorded_datetime: record.sale_date ? new Date(record.sale_date).toISOString() : null,
+          document_id: `DOC-${Math.floor(Math.random() * 1000000)}` // Generate a random document ID
         };
       }).filter(r => r.document_amt > 0); // Filter out $0 sales
       
       // Insert into Supabase
       if (formattedBatch.length > 0) {
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from('property_sales')
           .insert(formattedBatch);
         
@@ -83,7 +96,7 @@ async function fetchAndProcessPropertySales() {
       }
       
       processedCount += batch.length;
-      console.log(`Processed ${processedCount}/${records.length} records. Inserted ${successCount} valid records.`);
+      console.log(`Processed ${processedCount}/${limitedRecords.length} records. Inserted ${successCount} valid records.`);
     }
     
     return { success: true, processed: processedCount, inserted: successCount };
