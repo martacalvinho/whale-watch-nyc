@@ -63,7 +63,7 @@ const Dashboard = () => {
   };
 
   // Process the property data to extract dashboard metrics
-  const processPropertyData = (data) => {
+  const processPropertyData = (data: any[]) => {
     if (!data.length) return {
       totalTransactions: 0,
       activeInvestors: 0,
@@ -81,7 +81,7 @@ const Dashboard = () => {
     const totalTransactions = data.length;
     
     // Calculate average price
-    const totalValue = data.reduce((sum, item) => sum + (item.document_amt || 0), 0);
+    const totalValue = data.reduce((sum, item) => sum + (Number(item.document_amt) || 0), 0);
     const averagePrice = totalValue / totalTransactions;
     
     // Get unique properties (by block/lot combo)
@@ -89,7 +89,7 @@ const Dashboard = () => {
     const totalProperties = uniqueProperties.size;
     
     // Count document IDs as "investors" for simulation purposes
-    const investorCounts = {};
+    const investorCounts: Record<string, number> = {};
     data.forEach(item => {
       if (!item.document_id) return;
       investorCounts[item.document_id] = (investorCounts[item.document_id] || 0) + 1;
@@ -123,12 +123,12 @@ const Dashboard = () => {
         transactions: investor.count,
         value: data
           .filter(item => item.document_id === investor.id)
-          .reduce((sum, item) => sum + (item.document_amt || 0), 0)
+          .reduce((sum, item) => sum + (Number(item.document_amt) || 0), 0)
       };
     });
     
     // Group by borough for distribution
-    const boroughCounts = {};
+    const boroughCounts: Record<string, number> = {};
     data.forEach(item => {
       if (!item.borough) return;
       boroughCounts[item.borough] = (boroughCounts[item.borough] || 0) + 1;
@@ -139,7 +139,7 @@ const Dashboard = () => {
       .sort((a, b) => b.value - a.value);
     
     // Group by neighborhood (using address as proxy) for hotspots
-    const neighborhoodCounts = {};
+    const neighborhoodCounts: Record<string, number> = {};
     data.forEach(item => {
       if (!item.property_address) return;
       // Extract neighborhood from address (simplified)
@@ -155,7 +155,7 @@ const Dashboard = () => {
       .slice(0, 5);
     
     // Monthly transaction volumes
-    const monthCounts = {};
+    const monthCounts: Record<string, number> = {};
     data.forEach(item => {
       if (!item.document_date) return;
       const month = new Date(item.document_date).toLocaleString('default', { month: 'short' });
@@ -175,7 +175,7 @@ const Dashboard = () => {
     ];
     
     data.forEach(item => {
-      const price = item.document_amt || 0;
+      const price = Number(item.document_amt) || 0;
       const range = priceRanges.find(r => price >= r.min && price < r.max);
       if (range) range.count++;
     });
@@ -183,7 +183,7 @@ const Dashboard = () => {
     const priceRangeDistribution = priceRanges.map(r => ({ name: r.name, value: r.count }));
     
     // Asset class trends
-    const propertyCounts = {};
+    const propertyCounts: Record<string, number> = {};
     data.forEach(item => {
       if (!item.property_type) return;
       propertyCounts[item.property_type] = (propertyCounts[item.property_type] || 0) + 1;

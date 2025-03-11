@@ -1,6 +1,5 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.6'
-import { unzip } from 'https://deno.land/x/unzip@v0.3.0/mod.ts';
 import { parse as csvParse } from 'https://deno.land/std@0.177.0/encoding/csv.ts';
 
 // CORS headers

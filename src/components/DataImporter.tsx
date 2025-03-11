@@ -91,7 +91,7 @@ export function DataImporter() {
           {dataCount !== null && (
             <div className="flex items-center justify-between">
               <span className="text-sm">Current data in database:</span>
-              <Badge variant={dataCount > 0 ? "success" : "destructive"}>
+              <Badge variant={dataCount > 0 ? "secondary" : "destructive"}>
                 {dataCount > 0 ? `${dataCount.toLocaleString()} records` : "No data"}
               </Badge>
             </div>
