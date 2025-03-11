@@ -9,7 +9,66 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      property_sales: {
+        Row: {
+          air_rights: boolean | null
+          block: number | null
+          borough: string | null
+          crfn: string | null
+          document_amt: number | null
+          document_date: string | null
+          document_id: string | null
+          easement: boolean | null
+          id: number
+          lot: number | null
+          partial_lot: boolean | null
+          property_address: string | null
+          property_type: string | null
+          record_type: string | null
+          recorded_datetime: string | null
+          subterranean_rights: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          air_rights?: boolean | null
+          block?: number | null
+          borough?: string | null
+          crfn?: string | null
+          document_amt?: number | null
+          document_date?: string | null
+          document_id?: string | null
+          easement?: boolean | null
+          id?: number
+          lot?: number | null
+          partial_lot?: boolean | null
+          property_address?: string | null
+          property_type?: string | null
+          record_type?: string | null
+          recorded_datetime?: string | null
+          subterranean_rights?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          air_rights?: boolean | null
+          block?: number | null
+          borough?: string | null
+          crfn?: string | null
+          document_amt?: number | null
+          document_date?: string | null
+          document_id?: string | null
+          easement?: boolean | null
+          id?: number
+          lot?: number | null
+          partial_lot?: boolean | null
+          property_address?: string | null
+          property_type?: string | null
+          record_type?: string | null
+          recorded_datetime?: string | null
+          subterranean_rights?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
