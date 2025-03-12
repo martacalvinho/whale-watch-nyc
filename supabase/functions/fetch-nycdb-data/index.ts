@@ -63,7 +63,9 @@ async function fetchAndProcessPropertySales() {
     let successCount = 0;
     
     // Only process a limited subset for testing
-    const limitedRecords = records.slice(0, 2000);
+    // Adjust this number based on your database capacity
+    const MAX_RECORDS = 2000;
+    const limitedRecords = records.slice(0, MAX_RECORDS);
     
     for (let i = 0; i < limitedRecords.length; i += BATCH_SIZE) {
       const batch = limitedRecords.slice(i, i + BATCH_SIZE);

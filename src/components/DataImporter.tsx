@@ -47,12 +47,17 @@ export function DataImporter() {
       });
       
       // Call the edge function with a timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60-second timeout
+      const timeoutId = setTimeout(() => {
+        setIsImporting(false);
+        setImportStatus({ 
+          success: false, 
+          error: "The import is taking longer than expected. Check the logs for progress." 
+        });
+        toast.error("Import timeout - check the function logs.");
+      }, 60000); // 60-second timeout for UI feedback only
       
       const { data, error } = await supabase.functions.invoke('fetch-nycdb-data', {
         method: 'POST',
-        signal: controller.signal,
       });
       
       clearTimeout(timeoutId);
