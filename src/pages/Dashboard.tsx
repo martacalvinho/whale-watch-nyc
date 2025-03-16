@@ -1,471 +1,442 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, LineChart, Line } from "recharts";
-import { Building, Users, DollarSign, Briefcase, TrendingUp, MapPin } from "lucide-react";
-import { DataImporter } from "@/components/DataImporter";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
+import { Building, DollarSign, TrendingUp, Users, MapPin, ArrowRight, Clock, Home, Factory } from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
 
-// Dashboard Page
+// Sample data for the transaction chart
+const transactionData = [
+  { month: "Jan", amount: 12.4 },
+  { month: "Feb", amount: 14.8 },
+  { month: "Mar", amount: 10.2 },
+  { month: "Apr", amount: 15.6 },
+  { month: "May", amount: 18.2 },
+  { month: "Jun", amount: 16.9 },
+  { month: "Jul", amount: 21.3 },
+];
+
+// Sample data for the borough breakdown
+const boroughData = [
+  { name: "Manhattan", value: 42 },
+  { name: "Brooklyn", value: 28 },
+  { name: "Queens", value: 14 },
+  { name: "Bronx", value: 10 },
+  { name: "Staten Island", value: 6 },
+];
+
+// Key investors data
+const topInvestorsData = [
+  { name: "Blackstone Real Estate", type: "REIT", properties: 42, totalValue: "1.8B", focus: "Commercial" },
+  { name: "NYC Property Partners LLC", type: "LLC", properties: 36, totalValue: "620M", focus: "Multi-family" },
+  { name: "Hudson Yards Investors", type: "REIT", properties: 29, totalValue: "1.2B", focus: "Mixed-use" },
+  { name: "Maxwell Development Group", type: "LLC", properties: 24, totalValue: "475M", focus: "Residential" },
+  { name: "Gotham Acquisition Fund", type: "Private Equity", properties: 18, totalValue: "380M", focus: "Retail" },
+];
+
+// Property holding vs flipping data
+const holdingVsFlippingData = [
+  { name: "Holding (>2 years)", value: 68, color: "#8884d8" },
+  { name: "Flipping (<1 year)", value: 32, color: "#82ca9d" },
+];
+
+// Price range distribution data
+const priceRangeData = [
+  { name: "Luxury ($10M+)", value: 25, color: "#8884d8" },
+  { name: "High-end ($5-10M)", value: 30, color: "#82ca9d" },
+  { name: "Mid-tier ($1-5M)", value: 35, color: "#ffc658" },
+  { name: "Budget (<$1M)", value: 10, color: "#ff8042" },
+];
+
+// Asset class trends (last 12 months)
+const assetClassTrendsData = [
+  { month: "Aug", residential: 15, commercial: 8, industrial: 5 },
+  { month: "Sep", residential: 12, commercial: 9, industrial: 6 },
+  { month: "Oct", residential: 10, commercial: 11, industrial: 7 },
+  { month: "Nov", residential: 8, commercial: 12, industrial: 8 },
+  { month: "Dec", residential: 9, commercial: 14, industrial: 7 },
+  { month: "Jan", residential: 7, commercial: 15, industrial: 9 },
+  { month: "Feb", residential: 8, commercial: 16, industrial: 10 },
+  { month: "Mar", residential: 9, commercial: 17, industrial: 9 },
+  { month: "Apr", residential: 11, commercial: 18, industrial: 8 },
+  { month: "May", residential: 10, commercial: 16, industrial: 10 },
+  { month: "Jun", residential: 12, commercial: 15, industrial: 11 },
+  { month: "Jul", residential: 13, commercial: 17, industrial: 12 },
+];
+
+// Neighborhood investment hotspots
+const neighborhoodHotspotsData = [
+  { name: "Hudson Yards", borough: "Manhattan", value: 18, growth: "+15%" },
+  { name: "Williamsburg", borough: "Brooklyn", value: 15, growth: "+12%" },
+  { name: "Long Island City", borough: "Queens", value: 12, growth: "+20%" },
+  { name: "Bushwick", borough: "Brooklyn", value: 10, growth: "+25%" },
+  { name: "Financial District", borough: "Manhattan", value: 9, growth: "+8%" },
+];
+
 const Dashboard = () => {
-  const [selectedYear, setSelectedYear] = useState("2025");
-  const [dataLoaded, setDataLoaded] = useState(false);
-  const [dashboardData, setDashboardData] = useState({
-    totalTransactions: 0,
-    activeInvestors: 0,
-    averagePrice: 0,
-    totalProperties: 0,
-    topInvestors: [],
-    investmentHotspots: [],
-    boroughDistribution: [],
-    monthlyTransactions: [],
-    priceRangeDistribution: [],
-    assetClassTrends: []
-  });
-
-  const fetchDashboardData = async () => {
-    try {
-      // First, check if we have any data
-      const { count } = await supabase
-        .from('property_sales')
-        .select('*', { count: 'exact', head: true });
-      
-      if (!count || count === 0) {
-        // No data yet, so we don't try to load anything else
-        setDataLoaded(true);
-        return;
-      }
-      
-      // We have data, let's get dashboard metrics
-      // For a real implementation, these would be separate queries optimized for each data point
-      // For now, we'll simulate with the data we have and transform it
-      
-      // Count transactions
-      const { data: propertyData, error: propertyError } = await supabase
-        .from('property_sales')
-        .select('*')
-        .order('document_date', { ascending: false })
-        .limit(1000);  // Get recent data for analysis
-      
-      if (propertyError) throw propertyError;
-      
-      // Process the data we fetched
-      const transformedData = processPropertyData(propertyData || []);
-      setDashboardData(transformedData);
-      setDataLoaded(true);
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-      toast.error("Failed to load dashboard data");
-      setDataLoaded(true);
-    }
-  };
-
-  // Process the property data to extract dashboard metrics
-  const processPropertyData = (data: any[]) => {
-    if (!data.length) return {
-      totalTransactions: 0,
-      activeInvestors: 0,
-      averagePrice: 0,
-      totalProperties: 0,
-      topInvestors: [],
-      investmentHotspots: [],
-      boroughDistribution: [],
-      monthlyTransactions: [],
-      priceRangeDistribution: [],
-      assetClassTrends: []
-    };
-    
-    // Count total transactions
-    const totalTransactions = data.length;
-    
-    // Calculate average price
-    const totalValue = data.reduce((sum, item) => sum + (Number(item.document_amt) || 0), 0);
-    const averagePrice = totalValue / totalTransactions;
-    
-    // Get unique properties (by block/lot combo)
-    const uniqueProperties = new Set(data.map(item => `${item.block}-${item.lot}`));
-    const totalProperties = uniqueProperties.size;
-    
-    // Count document IDs as "investors" for simulation purposes
-    const investorCounts: Record<string, number> = {};
-    data.forEach(item => {
-      if (!item.document_id) return;
-      investorCounts[item.document_id] = (investorCounts[item.document_id] || 0) + 1;
-    });
-    
-    // Extract active investors
-    const activeInvestorsList = Object.entries(investorCounts)
-      .map(([id, count]) => ({ id, count }))
-      .sort((a, b) => b.count - a.count);
-    
-    const activeInvestors = activeInvestorsList.length;
-    
-    // Top investors - we use document_id as a proxy
-    const topInvestors = activeInvestorsList.slice(0, 5).map((investor, index) => {
-      // Generate fake investor names for demonstration
-      const companyNames = [
-        "NYC Property Holdings LLC", 
-        "Manhattan Realty Group", 
-        "Brooklyn Bridge Investments",
-        "Queens Development Corp",
-        "Bronx Building Partners",
-        "Staten Island Properties",
-        "Empire State Investors",
-        "Hudson River Holdings",
-        "Central Park Acquisitions"
-      ];
-      
-      return {
-        name: companyNames[index % companyNames.length],
-        id: investor.id,
-        transactions: investor.count,
-        value: data
-          .filter(item => item.document_id === investor.id)
-          .reduce((sum, item) => sum + (Number(item.document_amt) || 0), 0)
-      };
-    });
-    
-    // Group by borough for distribution
-    const boroughCounts: Record<string, number> = {};
-    data.forEach(item => {
-      if (!item.borough) return;
-      boroughCounts[item.borough] = (boroughCounts[item.borough] || 0) + 1;
-    });
-    
-    const boroughDistribution = Object.entries(boroughCounts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-    
-    // Group by neighborhood (using address as proxy) for hotspots
-    const neighborhoodCounts: Record<string, number> = {};
-    data.forEach(item => {
-      if (!item.property_address) return;
-      // Extract neighborhood from address (simplified)
-      const neighborhood = item.property_address.split(',')[0];
-      if (!neighborhood) return;
-      
-      neighborhoodCounts[neighborhood] = (neighborhoodCounts[neighborhood] || 0) + 1;
-    });
-    
-    const investmentHotspots = Object.entries(neighborhoodCounts)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
-    
-    // Monthly transaction volumes
-    const monthCounts: Record<string, number> = {};
-    data.forEach(item => {
-      if (!item.document_date) return;
-      const month = new Date(item.document_date).toLocaleString('default', { month: 'short' });
-      monthCounts[month] = (monthCounts[month] || 0) + 1;
-    });
-    
-    const monthlyTransactions = Object.entries(monthCounts)
-      .map(([name, value]) => ({ name, value }));
-    
-    // Price range distribution
-    const priceRanges = [
-      { name: "< $1M", min: 0, max: 1000000, count: 0 },
-      { name: "$1M-$5M", min: 1000000, max: 5000000, count: 0 },
-      { name: "$5M-$10M", min: 5000000, max: 10000000, count: 0 },
-      { name: "$10M-$50M", min: 10000000, max: 50000000, count: 0 },
-      { name: "> $50M", min: 50000000, max: Infinity, count: 0 }
-    ];
-    
-    data.forEach(item => {
-      const price = Number(item.document_amt) || 0;
-      const range = priceRanges.find(r => price >= r.min && price < r.max);
-      if (range) range.count++;
-    });
-    
-    const priceRangeDistribution = priceRanges.map(r => ({ name: r.name, value: r.count }));
-    
-    // Asset class trends
-    const propertyCounts: Record<string, number> = {};
-    data.forEach(item => {
-      if (!item.property_type) return;
-      propertyCounts[item.property_type] = (propertyCounts[item.property_type] || 0) + 1;
-    });
-    
-    const assetClassTrends = Object.entries(propertyCounts)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
-    
-    return {
-      totalTransactions,
-      activeInvestors,
-      averagePrice,
-      totalProperties,
-      topInvestors,
-      investmentHotspots,
-      boroughDistribution,
-      monthlyTransactions,
-      priceRangeDistribution,
-      assetClassTrends
-    };
-  };
-
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const colors = ["#3b82f6", "#2dd4bf", "#f43f5e", "#f59e0b", "#8b5cf6"];
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
-
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col gap-4">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
-          Overview of NYC real estate investment market in {selectedYear}
+          Overview of NYC real estate investment activity and key market insights
         </p>
       </div>
 
-      {!dataLoaded ? (
-        <div className="h-96 w-full flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto"></div>
-            <p className="mt-4 text-lg">Loading dashboard data...</p>
-          </div>
-        </div>
-      ) : (
-        <>
-          {/* Year Selection Tab */}
-          <Tabs defaultValue={selectedYear} className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="2023">2023</TabsTrigger>
-              <TabsTrigger value="2024">2024</TabsTrigger>
-              <TabsTrigger value="2025">2025</TabsTrigger>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="animate-scale-in bg-blue-50 hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+            <DollarSign className="h-6 w-6 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">2,345</div>
+            <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+          </CardContent>
+        </Card>
+        <Card className="animate-scale-in bg-amber-50 hover:shadow-md transition-all" style={{ animationDelay: "100ms" }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Investors</CardTitle>
+            <Users className="h-6 w-6 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">145</div>
+            <p className="text-xs text-muted-foreground">+12 new this month</p>
+          </CardContent>
+        </Card>
+        <Card className="animate-scale-in bg-green-50 hover:shadow-md transition-all" style={{ animationDelay: "200ms" }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Properties Tracked</CardTitle>
+            <Building className="h-6 w-6 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">12,234</div>
+            <p className="text-xs text-muted-foreground">Across all boroughs</p>
+          </CardContent>
+        </Card>
+        <Card className="animate-scale-in bg-purple-50 hover:shadow-md transition-all" style={{ animationDelay: "300ms" }}>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Price</CardTitle>
+            <TrendingUp className="h-6 w-6 text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">$2.4M</div>
+            <p className="text-xs text-muted-foreground">+4.5% from last month</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="animate-fade-in">
+        <CardHeader>
+          <CardTitle>Key Investor Insights</CardTitle>
+          <CardDescription>Analysis of major players and their investment patterns</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="buyers">
+            <TabsList className="mb-4">
+              <TabsTrigger value="buyers">Big Buyers</TabsTrigger>
+              <TabsTrigger value="neighborhoods">Target Neighborhoods</TabsTrigger>
+              <TabsTrigger value="strategy">Investment Strategy</TabsTrigger>
+              <TabsTrigger value="trends">Asset Class Trends</TabsTrigger>
             </TabsList>
-
-            <TabsContent value={selectedYear} className="space-y-4">
-              {/* Data Importer Card - only show if no data */}
-              {dashboardData.totalTransactions === 0 && (
-                <div className="grid gap-4 md:grid-cols-1">
-                  <DataImporter />
-                </div>
-              )}
-
-              {/* KPI Cards */}
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {/* KPI cards */}
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{dashboardData.totalTransactions.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Transactions in {selectedYear}
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Active Investors</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{dashboardData.activeInvestors.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Market participants
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Average Price</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{formatCurrency(dashboardData.averagePrice)}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Avg. transaction value
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Properties Tracked</CardTitle>
-                    <Building className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{dashboardData.totalProperties.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">
-                      Unique properties sold
-                    </p>
-                  </CardContent>
-                </Card>
+            
+            <TabsContent value="buyers" className="space-y-6">
+              <div className="space-y-1">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <Users className="h-5 w-5 text-blue-500" />
+                  Top 5 Investment Entities
+                </h3>
+                <p className="text-sm text-muted-foreground">Entities making the most significant NYC real estate purchases</p>
               </div>
-
-              {dashboardData.totalTransactions > 0 && (
-                <>
-                  {/* Top Investors */}
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                    <Card className="col-span-1">
-                      <CardHeader>
-                        <CardTitle>Top 5 Investors</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {dashboardData.topInvestors.map((investor, i) => (
-                            <div key={i} className="flex items-center">
-                              <div className={`w-2 h-2 rounded-full bg-blue-600 mr-3`} />
-                              <div className="flex-1 space-y-1">
-                                <p className="text-sm font-medium leading-none">{investor.name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {investor.transactions} transactions • {formatCurrency(investor.value)}
-                                </p>
-                              </div>
-                              <div className="font-medium">
-                                #{i + 1}
-                              </div>
-                            </div>
+              
+              <div className="space-y-4">
+                {topInvestorsData.map((investor, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50 hover:bg-blue-50 transition-colors">
+                    <div className="flex flex-col">
+                      <span className="font-medium">{investor.name}</span>
+                      <span className="text-sm text-muted-foreground">Focus: {investor.focus}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="bg-white">{investor.type}</Badge>
+                      <div className="text-right">
+                        <div className="font-medium">${investor.totalValue}</div>
+                        <div className="text-xs text-muted-foreground">{investor.properties} properties</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="neighborhoods" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <MapPin className="h-5 w-5 text-red-500" />
+                      Investment Hotspots
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Neighborhoods with highest investment concentration</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {neighborhoodHotspotsData.map((hood, i) => (
+                      <div key={i} className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50">
+                        <div className="flex flex-col">
+                          <span className="font-medium">{hood.name}</span>
+                          <span className="text-xs text-muted-foreground">{hood.borough}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div className="font-medium">{hood.value}%</div>
+                            <div className="text-xs text-green-600">{hood.growth}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-lg font-medium">Borough Distribution</h3>
+                    <p className="text-sm text-muted-foreground">Investment allocation across NYC boroughs</p>
+                  </div>
+                  
+                  <div className="h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={boroughData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={70}
+                          outerRadius={90}
+                          fill="#8884d8"
+                          paddingAngle={2}
+                          dataKey="value"
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        >
+                          {boroughData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={
+                                index === 0 ? '#8884d8' : 
+                                index === 1 ? '#82ca9d' : 
+                                index === 2 ? '#ffc658' : 
+                                index === 3 ? '#ff8042' : '#8dd1e1'
+                              } 
+                            />
                           ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Investment Hotspots */}
-                    <Card className="col-span-1">
-                      <CardHeader>
-                        <CardTitle>Investment Hotspots</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[200px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={dashboardData.investmentHotspots}>
-                              <XAxis dataKey="name" tickFormatter={(value) => value.substring(0, 10) + (value.length > 10 ? '...' : '')} />
-                              <YAxis />
-                              <Tooltip formatter={(value) => [`${value} transactions`, 'Volume']} />
-                              <Bar dataKey="count" fill="#3b82f6" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </Pie>
+                        <Tooltip formatter={(value) => [`${value}%`, 'Investment Share']} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-
-                  {/* Borough Distribution & Monthly Transactions */}
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                    <Card className="col-span-1">
-                      <CardHeader>
-                        <CardTitle>Borough Distribution</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[200px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={dashboardData.boroughDistribution}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={40}
-                                outerRadius={80}
-                                paddingAngle={2}
-                                dataKey="value"
-                                label={(entry) => entry.name}
-                              >
-                                {dashboardData.boroughDistribution.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip formatter={(value) => [`${value} transactions`, 'Volume']} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Monthly Transactions */}
-                    <Card className="col-span-1">
-                      <CardHeader>
-                        <CardTitle>Monthly Transaction Volume</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[200px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={dashboardData.monthlyTransactions}>
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip formatter={(value) => [`${value} transactions`, 'Volume']} />
-                              <Line type="monotone" dataKey="value" stroke="#3b82f6" strokeWidth={2} />
-                            </LineChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="strategy" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <div className="flex gap-1">
+                        <ArrowRight className="h-5 w-5 text-green-500" />
+                        <Clock className="h-5 w-5 text-purple-500" />
+                      </div>
+                      Flipping vs. Holding
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Are investors flipping properties or holding long-term?</p>
                   </div>
-
-                  {/* Price Range & Asset Class */}
-                  <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-                    <Card className="col-span-1">
-                      <CardHeader>
-                        <CardTitle>Price Range Distribution</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[200px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={dashboardData.priceRangeDistribution}>
-                              <XAxis dataKey="name" />
-                              <YAxis />
-                              <Tooltip formatter={(value) => [`${value} properties`, 'Count']} />
-                              <Bar dataKey="value" fill="#8b5cf6" />
-                            </BarChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Asset Class Trends */}
-                    <Card className="col-span-1">
-                      <CardHeader>
-                        <CardTitle>Asset Class Trends</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[200px]">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={dashboardData.assetClassTrends}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={40}
-                                outerRadius={80}
-                                paddingAngle={2}
-                                dataKey="value"
-                                label={(entry) => entry.name}
-                              >
-                                {dashboardData.assetClassTrends.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                                ))}
-                              </Pie>
-                              <Tooltip formatter={(value) => [`${value} properties`, 'Count']} />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        </div>
-                      </CardContent>
-                    </Card>
+                  
+                  <div className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={holdingVsFlippingData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, value }) => `${name} ${value}%`}
+                        >
+                          {holdingVsFlippingData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Legend />
+                        <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                </>
-              )}
+                  
+                  <div className="mt-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-purple-500" />
+                      <span><strong>68%</strong> of investors are holding properties long-term (more than 2 years)</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <ArrowRight className="h-4 w-4 text-green-500" />
+                      <span><strong>32%</strong> are flipping properties within a year of purchase</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <div className="space-y-1 mb-4">
+                    <h3 className="text-lg font-medium flex items-center gap-2">
+                      <DollarSign className="h-5 w-5 text-amber-500" />
+                      Price Range Focus
+                    </h3>
+                    <p className="text-sm text-muted-foreground">Investment concentration by property value</p>
+                  </div>
+                  
+                  <div className="h-[250px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={priceRangeData}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ name, value }) => `${name}: ${value}%`}
+                        >
+                          {priceRangeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Legend />
+                        <Tooltip formatter={(value) => [`${value}%`, 'Percentage']} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-200 border-amber-200">
+                      Key Insight: Most activity in $1M-$10M range (65%)
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="trends" className="space-y-6">
+              <div className="space-y-1 mb-4">
+                <h3 className="text-lg font-medium flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <Home className="h-5 w-5 text-blue-500" />
+                    <Factory className="h-5 w-5 text-purple-500" />
+                  </div>
+                  Asset Class Shifts (Last 12 Months)
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Investment trends across different property types showing a shift towards commercial spaces
+                </p>
+              </div>
+              
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={assetClassTrendsData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis label={{ value: 'Transaction Volume (%)', angle: -90, position: 'insideLeft' }} />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="residential" name="Residential" fill="#8884d8" />
+                    <Bar dataKey="commercial" name="Commercial" fill="#82ca9d" />
+                    <Bar dataKey="industrial" name="Industrial" fill="#ffc658" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h4 className="font-medium mb-2">Key Asset Class Insights:</h4>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                    <span>Commercial property investment has increased by 35% year-over-year</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-blue-500" />
+                    <span>Industrial spaces seeing steady growth at 18% annually</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-red-500 transform rotate-180" />
+                    <span>Residential investment has declined by 12% as investors shift focus</span>
+                  </li>
+                </ul>
+              </div>
             </TabsContent>
           </Tabs>
-        </>
-      )}
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <CardTitle>Monthly Transaction Volume</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={transactionData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis label={{ value: 'Billion $', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip formatter={(value) => [`$${value}B`, 'Transaction Volume']} />
+                  <Bar dataKey="amount" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="animate-fade-in">
+          <CardHeader>
+            <CardTitle>Investment Distribution by Borough</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {boroughData.map((item, i) => (
+                <div key={i} className="flex items-center">
+                  <div className="w-2/3">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm font-medium">{item.name}</span>
+                      <span className="text-sm font-medium">{item.value}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2.5">
+                      <div 
+                        className="h-2.5 rounded-full" 
+                        style={{ 
+                          width: `${item.value}%`, 
+                          backgroundColor: i === 0 ? '#8884d8' : 
+                                          i === 1 ? '#82ca9d' : 
+                                          i === 2 ? '#ffc658' : 
+                                          i === 3 ? '#ff8042' : '#8dd1e1' 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="w-1/3 pl-4">
+                    <div className="text-sm text-muted-foreground">
+                      {i === 0 ? 'Highest activity' : 
+                       i === 1 ? 'Growing rapidly' : 
+                       i === 2 ? 'Steady growth' : 
+                       i === 3 ? 'Emerging market' : 'Limited transactions'}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };
